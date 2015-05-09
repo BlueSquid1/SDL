@@ -94,6 +94,11 @@ bool LTexture::LoadFromFile(std::string path)
 #ifdef _SDL_TTF_H
 bool LTexture::loadFromRenderedText(std::string textureText, SDL_Color textColor)
 {
+	if (textureText.size() <= 0)
+	{
+		textureText = " ";
+	}
+
 	Free();
 	SDL_Surface * loadedSurface = NULL;
 	loadedSurface = TTF_RenderText_Solid(gFont, textureText.c_str(), textColor);
@@ -186,14 +191,15 @@ int main(int argc, char* args[])
 
 	TTF_Init();
 
-	gFont = TTF_OpenFont("res/impact.ttf", 15);
+	gFont = TTF_OpenFont("res/VeraMono.ttf", 15);
 
 
 	SDL_Event e;
 
 	SDL_Color textColour = { 0x00, 0x00, 0x00, 0xFF };
 
-	std::string inputText = "input text";
+	std::string inputText;
+	int curserPos = 0;
 
 	gInputTextTexture.loadFromRenderedText(inputText, textColour);
 
@@ -214,6 +220,58 @@ int main(int argc, char* args[])
 			{
 				switch (e.key.keysym.sym)
 				{
+				case SDLK_LEFT:
+					if (curserPos > 0)
+					{
+						curserPos--;
+					}
+					break;
+				case SDLK_RIGHT:
+					if (curserPos < inputText.size())
+					{
+						curserPos++;
+					}
+					break;
+				case SDLK_BACKSPACE:
+				{
+					if (curserPos > 0)
+					{
+						if (inputText.size() == curserPos)
+						{
+							//deleting from the end of the string
+							inputText.pop_back();
+							curserPos--;
+							updateText = true;
+						}
+						else
+						{
+							//deleting from the middle of the string
+							inputText.erase(curserPos - 1, 1);
+							curserPos--;
+							updateText = true;
+						}
+					}
+					break;
+				}
+				case SDLK_DELETE:
+				{
+					if (curserPos < inputText.size())
+					{
+						if (curserPos == inputText.size() - 1)
+						{
+							//deleting from the end of the string
+							inputText.pop_back();
+							updateText = true;
+						}
+						else
+						{
+							//deleting from the middle of the string
+							inputText.erase(curserPos, 1);
+							updateText = true;
+						}
+					}
+					break;
+				}
 				default:
 					//ignore key pressed
 					break;
@@ -221,23 +279,26 @@ int main(int argc, char* args[])
 			}
 			else if (e.type == SDL_TEXTINPUT)
 			{
-				inputText += e.text.text;
+				//add the char at the curser pos
+				if (inputText.size() == curserPos)
+				{
+					//add char to the end of the string
+					inputText += e.text.text;
+					curserPos++;
+				}
+				else
+				{
+					//insert into the middle of the string
+					inputText.insert(curserPos, e.text.text);
+					curserPos++;
+				}
 				updateText = true;
-			}
-			else if (e.type == SDL_TEXTEDITING)
-			{
-				//The person is not writing in anscii
-				std::string foreignText;
-
-				foreignText = e.edit.text;
-
-				std::cout << foreignText.c_str() << std::endl;
 			}
 		}
 
 		if (updateText)
 		{
-			if (inputText.size() > 0)
+			if (inputText.size() >= 0)
 			{
 				gInputTextTexture.loadFromRenderedText(inputText.c_str(), textColour);
 			}
@@ -247,7 +308,20 @@ int main(int argc, char* args[])
 		SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
 		SDL_RenderClear(gRenderer);
 
-		gInputTextTexture.Render(WIDTH / 3.0, HEIGHT / 3.0);
+		int startPosX = WIDTH/3.0;
+
+		int startPosY = HEIGHT / 3.0;
+
+		gInputTextTexture.Render(startPosX, startPosY);
+
+		SDL_Rect curserPic;
+		curserPic.x = startPosX + (curserPos) * 9;
+		curserPic.y = startPosY;
+		curserPic.w = 1;
+		curserPic.h = 16;
+
+		SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xFF);
+		SDL_RenderFillRect(gRenderer, &curserPic);
 
 		SDL_RenderPresent(gRenderer);
 	}
